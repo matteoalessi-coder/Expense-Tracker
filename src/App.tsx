@@ -32,7 +32,7 @@ function App() {
 
     try {
       const response = await fetch(
-  "https://script.google.com/macros/s/AKfycbwnghHqbjwio_NgbSPSrQmq4P81yl-uLo7Ny-9qzhtWQmYB_Vy45NkS_BbLOJS3xfDP/exec", // your deployed Apps Script URL
+  "https://script.google.com/macros/s/AKfycbwG0he-4qrb47svUsgQ8j9g2cH195bBcgUVKP14M7jYSGWZWkvRce4Dwyt8ozo5TN0F/exec", // your deployed Apps Script URL
   {
     method: "POST",
     body: form,
