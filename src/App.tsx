@@ -32,12 +32,13 @@ function App() {
 
     try {
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbxvGl6kP_KKxqV-d0oEEwX9yz4Z_egbVxC6vS5mPL4tQWdCZyA7omNoZ-1g4aLz95G/exec", // your deployed Apps Script URL
-        {
-          method: "POST",
-          body: form,
-        }
-      );
+  "https://script.google.com/macros/s/AKfycbwnghHqbjwio_NgbSPSrQmq4P81yl-uLo7Ny-9qzhtWQmYB_Vy45NkS_BbLOJS3xfDP/exec", // your deployed Apps Script URL
+  {
+    method: "POST",
+    body: form,
+  }
+);
+
 
       const result = await response.json();
       console.log("✅ Expense saved:", result);
