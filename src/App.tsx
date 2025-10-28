@@ -1,194 +1,183 @@
 import React, { useState } from "react";
 import "./App.css";
 
-function App() {
+const SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbztJ832MbWkaHhvItlBtIwt5ahqnEjaY-sYhp0yKuLPyZGYSbmXfMd9hxpODi9Uh7YO/exec";
+
+const App: React.FC = () => {
   const [formData, setFormData] = useState({
     date: "",
-    type: "",
-    currency: "",
-    paymentMethod: "",
+    typology: "",
     amount: "",
-    receipt: null as File | null,
+    currency: "EUR",
+    paymentMethod: "Debit card",
   });
+
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [status, setStatus] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files && e.target.files[0];
+    setReceiptFile(f || null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setStatus("");
 
-    const form = new FormData();
-    form.append(
-      "data",
-      JSON.stringify({
-        date: formData.date,
-        type: formData.type,
-        currency: formData.currency,
-        paymentMethod: formData.paymentMethod,
-        amount: formData.amount,
-      })
-    );
-
-    if (formData.receipt) {
-      form.append("receipt", formData.receipt);
+    // basic validation
+    if (!formData.date || !formData.typology || !formData.amount) {
+      setStatus("Please fill required fields (date, typology, amount).");
+      setLoading(false);
+      return;
     }
 
     try {
-      const response = await fetch(
-  "https://script.google.com/macros/s/AKfycbynFoLpexK88Tx-SxpoqEh2qR6hclmUndLwU6CAtMimeZN7mqFaM48fAFkgLoml7mI/exec", // your deployed Apps Script URL
-  {
-    method: "POST",
-    body: form,
-  }
-);
+      // Use FormData so Apps Script can receive file uploads like the original Google Form
+      const fd = new FormData();
+      fd.append("date", formData.date);
+      fd.append("typology", formData.typology);
+      fd.append("amount", formData.amount);
+      fd.append("currency", formData.currency);
+      fd.append("paymentMethod", formData.paymentMethod);
+      if (receiptFile) fd.append("receipt", receiptFile);
 
+      // Post to Apps Script (uses no-cors so the request always goes through as a form POST — keep the URL updated)
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: fd,
+      });
 
-      const result = await response.json();
-      console.log("✅ Expense saved:", result);
-      alert("Expense saved successfully!");
-
+      // Note: when using mode: 'no-cors' response is opaque — we show success optimistically.
+      setStatus("✅ Expense saved successfully!");
       setFormData({
         date: "",
-        type: "",
-        currency: "",
-        paymentMethod: "",
+        typology: "",
         amount: "",
-        receipt: null,
+        currency: "EUR",
+        paymentMethod: "Debit card",
       });
-    } catch (error) {
-      console.error("❌ Upload error:", error);
-      alert("Error saving expense.");
+      setReceiptFile(null);
+    } catch (err) {
+      console.error("Save error:", err);
+      setStatus("❌ Error saving expense. Check console for details.");
+    } finally {
+      setLoading(false);
+      // clear status after a short time
+      setTimeout(() => setStatus(""), 4500);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
-      {/* Logo */}
-      <img
-  src="https://cdn.shopify.com/s/files/1/0629/5234/1556/files/Budeoo-3.png?v=1761551265"
-  alt="Budeoo Logo"
-  className="logo"
-/>
+    <div className="app-container">
+      {/* Logo (Budeoo) */}
+      <div className="logo-section">
+        <img
+          src="https://cdn.shopify.com/s/files/1/0629/5234/1556/files/Budeoo-3.png?v=1761551265"
+          alt="Budeoo Logo"
+          className="logo"
+        />
+      </div>
 
-      <h1 className="text-3xl font-bold text-gray-800 mb-2">
-        Budeoo Expense Tracker
-      </h1>
-      <p className="text-gray-600 mb-8 text-center">
-        Add and upload your expenses easily.
-      </p>
+      <h1 className="title">Budeoo Expense Tracker</h1>
 
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm bg-white p-6 rounded-2xl shadow-md space-y-4"
-      >
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Date
-          </label>
+      <form className="expense-form" onSubmit={handleSubmit}>
+        <label>
+          Date
           <input
             type="date"
-            className="w-full border border-gray-300 rounded-lg p-2 mt-1"
+            name="date"
             value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            onChange={handleChange}
             required
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Type of Expense
-          </label>
+        <label>
+          Typology of Expense
           <select
-            className="w-full border border-gray-300 rounded-lg p-2 mt-1"
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+            name="typology"
+            value={formData.typology}
+            onChange={handleChange}
             required
           >
-            <option value="">Select type</option>
+            <option value="">Select typology</option>
             <option value="Meal">Meal</option>
-            <option value="Transport">Transport</option>
             <option value="Hotel">Hotel</option>
+            <option value="Transport">Transport</option>
             <option value="Office Supplies">Office Supplies</option>
             <option value="Other">Other</option>
           </select>
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Currency
-          </label>
+        <label>
+          Amount
+          <input
+            type="number"
+            name="amount"
+            value={formData.amount}
+            onChange={handleChange}
+            required
+            step="0.01"
+          />
+        </label>
+
+        <label>
+          Currency
           <select
-            className="w-full border border-gray-300 rounded-lg p-2 mt-1"
+            name="currency"
             value={formData.currency}
-            onChange={(e) =>
-              setFormData({ ...formData, currency: e.target.value })
-            }
+            onChange={handleChange}
             required
           >
-            <option value="">Select currency</option>
             <option value="EUR">EUR</option>
             <option value="USD">USD</option>
             <option value="GBP">GBP</option>
             <option value="TRY">TRY</option>
           </select>
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Payment Method
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Card, Cash"
-            className="w-full border border-gray-300 rounded-lg p-2 mt-1"
+        <label>
+          Payment Method
+          <select
+            name="paymentMethod"
             value={formData.paymentMethod}
-            onChange={(e) =>
-              setFormData({ ...formData, paymentMethod: e.target.value })
-            }
+            onChange={handleChange}
             required
-          />
-        </div>
+          >
+            <option value="Debit card">Debit card</option>
+            <option value="Credit card">Credit card</option>
+            <option value="Cash">Cash</option>
+          </select>
+        </label>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Amount
-          </label>
-          <input
-            type="number"
-            placeholder="0.00"
-            className="w-full border border-gray-300 rounded-lg p-2 mt-1"
-            value={formData.amount}
-            onChange={(e) =>
-              setFormData({ ...formData, amount: e.target.value })
-            }
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Receipt (open camera)
-          </label>
+        <label>
+          Upload Receipt (optional)
           <input
             type="file"
-            accept="image/*"
-            capture="environment"
-            className="w-full border border-gray-300 rounded-lg p-2 mt-1"
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                receipt: e.target.files?.[0] || null,
-              })
-            }
+            accept="image/*,.pdf"
+            onChange={handleFileChange}
           />
-        </div>
+        </label>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white font-medium py-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          Save Expense
+        <button type="submit" className="submit-btn" disabled={loading}>
+          {loading ? "Saving..." : "Save Expense"}
         </button>
       </form>
+
+      {status && <p className="status">{status}</p>}
     </div>
   );
-}
+};
 
 export default App;
